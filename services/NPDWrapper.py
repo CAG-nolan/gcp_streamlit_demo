@@ -27,4 +27,4 @@ class NPDWrapper:
 
     def return_json(self):
         query_job = self.return_dataframe()
-        return query_job.to_json()
+        return query_job.to_json(orient='records')
