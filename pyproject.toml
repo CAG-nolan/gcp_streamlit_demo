@@ -11,6 +11,7 @@ streamlit = "^1.32.1"
 streamlit-extras = "^0.4.0"
 google-cloud-bigquery = "^3.19.0"
 google = "^3.0.0"
+db-dtypes = "^1.2.0"
 
 
 [build-system]
