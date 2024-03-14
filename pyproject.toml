@@ -9,6 +9,8 @@ readme = "README.md"
 python = "^3.11"
 streamlit = "^1.32.1"
 streamlit-extras = "^0.4.0"
+google-cloud-bigquery = "^3.19.0"
+google = "^3.0.0"
 
 
 [build-system]
