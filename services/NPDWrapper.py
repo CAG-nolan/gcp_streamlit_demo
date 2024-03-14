@@ -13,7 +13,6 @@ from within this wrapper
 
 from google.cloud import bigquery
 
-# Still working on auth, need a service account
 class NPDWrapper:
     PROJECT_ID = "gcp-atcbld0004344"
     BQ_DATASET = "food"
@@ -27,5 +26,5 @@ class NPDWrapper:
         return query_job.to_dataframe()
 
     def return_json(self):
-        query_job = self.CLIENT.query(self.QUERY)
+        query_job = self.return_dataframe()
         return query_job.to_json()
