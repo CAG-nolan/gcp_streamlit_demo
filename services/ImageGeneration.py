@@ -135,7 +135,10 @@ class ImageGeneration:
         images[0].show()
 
         print(f"Created output image using {len(images[0]._image_bytes)} bytes")
-
+        for image in images:
+            number = 1
+            image.save(f"image_{number}.png")
+            number += 1
         return images
 
     def show_images(self, output):
