@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "stream"
+version = "0.1.0"
+description = ""
+authors = ["nulzo <nolanpgregory@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+streamlit = "^1.32.1"
+streamlit-extras = "^0.4.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
