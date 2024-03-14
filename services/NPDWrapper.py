@@ -29,4 +29,3 @@ class NPDWrapper:
     def return_json(self):
         query_job = self.CLIENT.query(self.QUERY)
         return query_job.to_json()
-
