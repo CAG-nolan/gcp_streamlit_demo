@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "stream"
+name = "gcpimagegeneration"
 version = "0.1.0"
 description = ""
 authors = ["nulzo <nolanpgregory@gmail.com>"]
@@ -7,12 +7,8 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-streamlit = "^1.32.1"
-streamlit-extras = "^0.4.0"
-google-cloud-bigquery = "^3.19.0"
-google = "^3.0.0"
-db-dtypes = "^1.2.0"
 flask = "^3.0.2"
+vertexai = "^1.43.0"
 
 
 [build-system]
