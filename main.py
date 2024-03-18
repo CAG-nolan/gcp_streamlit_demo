@@ -1,6 +1,7 @@
 import streamlit as st
 from streamlit_extras.app_logo import add_logo
 from services.NPDWrapper import NPDWrapper
+import json
 
 from pandas import DataFrame
 import csv
@@ -42,6 +43,9 @@ def restart():
     st.session_state.generate_button_disabled = False
     st.session_state.messages = []
 
+def no_chat():
+    st.session_state.chatting = False
+
 def initialize_state():
     if "form_one_done" not in st.session_state:
         st.session_state.form_one_done = False
@@ -55,6 +59,8 @@ def initialize_state():
         st.session_state.infer_data = False
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    if "chatting" not in st.session_state:
+        st.session_state.chatting = True
 
 add_logo("./conagra.png", height=50)
 
@@ -85,7 +91,28 @@ def custom_metric(value, label, color, tag, wrapper):
 
 st.title("Conagra and Google Hackathon")
 
-if not st.session_state.form_one_done:
+if st.session_state.chatting:
+    chat_bub = st.container(border=True)
+    # React to user input
+    if prompt := st.chat_input("Ask questions related to data..."):
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with chat_bub:
+            with st.chat_message("user"):
+                st.markdown(prompt)
+        response = requests.post(url="http://127.0.0.1:5001/api/questions/flavor", json=dict({"query": prompt}))
+        df = json.dumps(response.json().get("metadata").get("raw_pandas_output"))
+        print(json.dumps(response.json().get("metadata").get("raw_pandas_output")))
+        st.session_state.messages.append({"role": "assistant", "content": df})
+    with chat_bub:
+        # Display chat messages from history on app rerun
+        for message in st.session_state.messages:
+            if message["role"] == "assistant":
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+    st.button("Next Section", on_click=no_chat)   
+
+if not st.session_state.form_one_done and not st.session_state.chatting:
     # Load the container about the IRI and NPD data
     form_part_one = st.container(border=True)
     with form_part_one:
@@ -135,26 +162,6 @@ if not st.session_state.form_one_done:
             st.success(successful_attributes.text)
             st.error(negative_attributes.text)
         
-        st.header('IRI Data Communication', divider='gray')
-        
-        # Display chat messages from history on app rerun
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-
-      
-        # React to user input
-        if prompt := st.chat_input("Ask questions related to data..."):
-            # Display user message in chat message container
-            st.chat_message("user").markdown(prompt)
-            # Add user message to chat history
-            st.session_state.messages.append({"role": "user", "content": prompt})
-
-            response = f"Echo: {prompt}"
-            
-            # Add assistant response to chat history
-            st.session_state.messages.append({"role": "assistant", "content": response})
-
         st.button("Next Section", on_click=progress_form_one)
             
 # st.write(npd_wrapper.return_dataframe())
@@ -162,11 +169,6 @@ if st.session_state.form_one_done and not st.session_state.form_three_done:
     form_part_two = st.container(border=True)
     with form_part_two:      
         st.header('Generate New Products', divider='gray')
-            
-        selected_categories = st.multiselect(
-            'Select Target Categories',
-            ['Frozen', 'Handhelds', 'Healthy', 'Crunchy']
-        )
 
         selected_age = st.selectbox(
             'Select Target Age Group',
@@ -182,36 +184,36 @@ if st.session_state.form_one_done and not st.session_state.form_three_done:
         )
 
         additional = st.text_area(label="Any Additional Information")
+        if not st.session_state.form_two_done:
+            # Get the descriptors
+            with open('data/ThemeData.csv', newline='') as csvfile:
+                csv_data = csv.reader(csvfile, delimiter=',')
+                csv_str = ""
+                for row in csv_data:
+                    csv_str += str(row)
 
-        # Get the descriptors
-        with open('data/ThemeData.csv', newline='') as csvfile:
-            csv_data = csv.reader(csvfile, delimiter=',')
-            csv_str = ""
-            for row in csv_data:
-                csv_str += str(row)
+            positives = {
+                "prompt": f"Find all the positive attributes of this csv file and return the result as a string paragraph. The data is here: {csv_str}",
+            }
+            positives = requests.post(url="http://127.0.0.1:6969/api/prompt/chat", json=positives)
+            st.session_state.positives = positives.text
+            st.success(positives.text)
 
-        positives = {
-            "prompt": f"Find all the positive attributes of this csv file and return the result as a string paragraph. The data is here: {csv_str}",
-        }
-        positives = requests.post(url="http://127.0.0.1:6969/api/prompt/chat", json=positives)
+            negatives = {
+                "prompt": f"Find all the negative attributes of this csv file and return the result as a string paragraph. The data is here: {csv_str}",
+            }
+            negatives = requests.post(url="http://127.0.0.1:6969/api/prompt/chat", json=negatives)
+            st.session_state.negatives = negatives.text
+            st.error(negatives.text)
 
-        st.success(positives.text)
+            trends = {
+                "prompt": f"Based on the given csv file, infer if there are any trends in the data. The data is here: {csv_str}",
+            }
+            trends = requests.post(url="http://127.0.0.1:6969/api/prompt/chat", json=trends)
+            st.session_state.trends = trends.text
+            st.info(trends.text)
 
-        negatives = {
-            "prompt": f"Find all the negative attributes of this csv file and return the result as a string paragraph. The data is here: {csv_str}",
-        }
-        negatives = requests.post(url="http://127.0.0.1:6969/api/prompt/chat", json=negatives)
-
-        st.error(negatives.text)
-
-        trends = {
-            "prompt": f"Based on the given csv file, infer if there are any trends in the data. The data is here: {csv_str}",
-        }
-        trends = requests.post(url="http://127.0.0.1:6969/api/prompt/chat", json=trends)
-
-        st.info(trends.text)
-
-        st.button("Generate Items", on_click=progress_form_two, disabled=st.session_state.generate_button_disabled)
+            st.button("Generate Items", on_click=progress_form_two, disabled=st.session_state.generate_button_disabled)
 
     # Load the image content generation tooling
     if st.session_state.form_two_done and not st.session_state.form_three_done:
@@ -220,30 +222,48 @@ if st.session_state.form_one_done and not st.session_state.form_three_done:
             st.header('Generate New Products', divider='gray')
 
             data = {
-                "form": selected_categories,
+                "form": "handheld",
                 "age": selected_age,
-                "likes": positives.text,
-                "dislikes": negatives.text,
+                "likes": st.session_state.positives,
+                "dislikes": st.session_state.negatives,
                 "additional": additional,
-                "trends": csv_str
+                "trends": st.session_state.trends
             }
 
             col1, col2, col3= st.columns(3)
 
             with col1:
-                concept = requests.post(url="http://127.0.0.1:6969/api/prompt/generate", json=data)
-                concept = concept.json()
-                render_card(concept.get("title"), concept.get("description"), concept.get("reasoning"), btn_key="next_one")
+                generated = False
+                while not generated:
+                    try:
+                        concept = requests.post(url="http://127.0.0.1:6969/api/prompt/generate", json=data)
+                        concept = concept.json()
+                        render_card(concept.get("title"), concept.get("description"), concept.get("reasoning"), btn_key="next_one")
+                        generated = True
+                    except:
+                        continue
+
 
             with col2:
-                concept = requests.post(url="http://127.0.0.1:6969/api/prompt/generate", json=data)
-                concept = concept.json()
-                render_card(concept.get("title"), concept.get("description"), concept.get("reasoning"), btn_key="next_two")
+                generated = False
+                while not generated:
+                    try:
+                        concept = requests.post(url="http://127.0.0.1:6969/api/prompt/generate", json=data)
+                        concept = concept.json()
+                        render_card(concept.get("title"), concept.get("description"), concept.get("reasoning"), btn_key="next_two")
+                        generated = True
+                    except:
+                        continue
 
             with col3:
-                concept = requests.post(url="http://127.0.0.1:6969/api/prompt/generate", json=data)
-                concept = concept.json()
-                render_card(concept.get("title"), concept.get("description"), concept.get("reasoning"), btn_key="next_three")
+                generated = False
+                while not generated:
+                    try:
+                        concept = requests.post(url="http://127.0.0.1:6969/api/prompt/generate", json=data)
+                        concept = concept.json()
+                        render_card(concept.get("title"), concept.get("description"), concept.get("reasoning"), btn_key="next_three")
+                        generated = True
+                    except: continue
 
 
 if st.session_state.form_three_done:

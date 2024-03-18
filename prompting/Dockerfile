@@ -25,4 +25,6 @@ COPY . /app
 
 RUN rm -rf ./.venv
 
+ENV GOOGLE_APPLICATION_CREDENTIALS /etc/creds/application_default_credentials.json
+
 CMD [ "poetry", "run", "python3", "main.py", "--host=0.0.0.0"]
