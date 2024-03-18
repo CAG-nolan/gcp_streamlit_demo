@@ -2,8 +2,8 @@ import streamlit as st
 from streamlit_extras.app_logo import add_logo
 from services.NPDWrapper import NPDWrapper
 import json
-
-from pandas import DataFrame
+from io import BytesIO
+import pandas as pd
 import csv
 import requests
 
@@ -89,10 +89,15 @@ def custom_metric(value, label, color, tag, wrapper):
         unsafe_allow_html=True
     )
 
-st.title("Conagra and Google Hackathon")
+# Add logo
+st.markdown("""
+<img src="https://upload.wikimedia.org/wikipedia/en/4/44/Conagra_brands_logo17.png" alt=""></img>
+""", unsafe_allow_html=True)
+st.title("Conagra Product Innovation Engine (PIE)")
 
 if st.session_state.chatting:
     chat_bub = st.container(border=True)
+    
     # React to user input
     if prompt := st.chat_input("Ask questions related to data..."):
         # Add user message to chat history
@@ -100,16 +105,22 @@ if st.session_state.chatting:
         with chat_bub:
             with st.chat_message("user"):
                 st.markdown(prompt)
+        # TODO: Flavor vs form
+        
         response = requests.post(url="http://127.0.0.1:5001/api/questions/flavor", json=dict({"query": prompt}))
-        df = json.dumps(response.json().get("metadata").get("raw_pandas_output"))
-        print(json.dumps(response.json().get("metadata").get("raw_pandas_output")))
+        df = json.dumps(response.json())
+        df = pd.DataFrame(eval(df))
+        # df = pd.read_json(BytesIO(df))
+        
+        # print(json.dumps(response.json().get("metadata").get("raw_pandas_output")))
         st.session_state.messages.append({"role": "assistant", "content": df})
     with chat_bub:
         # Display chat messages from history on app rerun
         for message in st.session_state.messages:
             if message["role"] == "assistant":
                 with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
+                    st.write(message["content"])
+    uploaded_file = st.file_uploader("Upload additional files")
     st.button("Next Section", on_click=no_chat)   
 
 if not st.session_state.form_one_done and not st.session_state.chatting:
@@ -118,7 +129,7 @@ if not st.session_state.form_one_done and not st.session_state.chatting:
     with form_part_one:
         npd_wrapper = NPDWrapper()
         
-        df:DataFrame = npd_wrapper.return_dataframe()
+        df = npd_wrapper.return_dataframe()
         # Find the column with the maximum value in each row
         max_columns = df.iloc[:, 1:].idxmax(axis=1)
 
@@ -129,10 +140,10 @@ if not st.session_state.form_one_done and not st.session_state.chatting:
         # Find the minimum value in each row
         min_values = df.iloc[:, 1:].min(axis=1)
 
-        st.header('NPD Data Summarization', divider='gray')
+        st.header('Consumer Occasions', divider='gray')
 
         # Combine results into a DataFrame
-        result_df = DataFrame({'Min_Column': min_columns, 'Min_Value': min_values, 'Max_Column': max_columns, 'Max_Value': max_values})
+        result_df = pd.DataFrame({'Min_Column': min_columns, 'Min_Value': min_values, 'Max_Column': max_columns, 'Max_Value': max_values})
         
         col1, col2, col3= st.columns(3)
 
@@ -168,12 +179,16 @@ if not st.session_state.form_one_done and not st.session_state.chatting:
 if st.session_state.form_one_done and not st.session_state.form_three_done:   
     form_part_two = st.container(border=True)
     with form_part_two:      
-        st.header('Generate New Products', divider='gray')
+        st.header('Consumer Occasions', divider='gray')
 
         selected_age = st.selectbox(
             'Select Target Age Group',
-            ['Young Adults (<= 18)', 'Adults (> 18)']
+            ['Young Adults (Less than eighteen)', 'Adults']
         )
+
+        forms = st.selectbox(
+            'Select the form',
+            ('Handheld', 'Novelty', 'Frozen'))
 
         target_prep_time = st.slider(
             'Target Preparation Time (min)',
@@ -182,6 +197,8 @@ if st.session_state.form_one_done and not st.session_state.form_three_done:
             value=(2, 5),
             step=1,
         )
+
+        st.header('Yogi Data Satisfiers/Dissatisfiers', divider='gray')
 
         additional = st.text_area(label="Any Additional Information")
         if not st.session_state.form_two_done:
@@ -223,7 +240,7 @@ if st.session_state.form_one_done and not st.session_state.form_three_done:
 
             data = {
                 "form": "handheld",
-                "age": selected_age,
+                "age": "Adult",
                 "likes": st.session_state.positives,
                 "dislikes": st.session_state.negatives,
                 "additional": additional,
